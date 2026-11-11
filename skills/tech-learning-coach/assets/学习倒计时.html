@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>学习倒计时</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23185476'/%3E%3Ccircle cx='16' cy='17' r='10' fill='none' stroke='white' stroke-width='2'/%3E%3Cpath d='M16 10v7l4 3M12 2h8' stroke='white' fill='none' stroke-width='2'/%3E%3C/svg%3E">
+<style>
+:root{color-scheme:light;--ink:#20334b;--muted:#586c83;--blue:#185476;--bg:#f1f5f9;--line:#d4e0eb;--warn:#9b4b13}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;font-size:16px;line-height:1.65}main{max-width:640px;margin:auto;padding:22px 20px 32px}header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:18px;border-bottom:1px solid var(--line)}header strong{font-size:18px}#connection{font-size:13px;color:var(--muted)}.lesson{padding:24px 0 4px}.lesson small{color:var(--muted)}h1{font-size:23px;line-height:1.45;margin:9px 0;overflow-wrap:anywhere}.clock{padding:15px 0 22px;text-align:center}.digits{font-size:clamp(68px,19vw,106px);line-height:1.25;letter-spacing:.025em;font-variant-numeric:tabular-nums;font-weight:650;color:var(--blue)}#status{margin:5px 0;color:var(--muted)}progress{width:100%;height:8px;display:block;margin:24px 0 10px;accent-color:var(--blue);border:0}#meta{font-size:14px;color:var(--muted);display:flex;justify-content:space-between;gap:12px}.controls{display:flex;gap:10px;flex-wrap:wrap}.controls button{flex:1;min-width:90px}button{min-height:46px;border:1px solid var(--line);border-radius:8px;background:white;color:var(--ink);padding:9px 12px;font:inherit;cursor:pointer}button.primary{background:var(--blue);color:white;border-color:var(--blue)}button:hover{filter:brightness(.96)}button:disabled{opacity:.5;cursor:default}button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #70a7cf;outline-offset:3px}#notice{margin:18px 0;padding:12px 15px;background:#fff3e5;color:var(--warn);border-radius:8px}#notice[hidden]{display:none}.note{font-size:14px;color:var(--muted);margin:19px 0 24px}.note p{margin:7px 0}details{border-top:1px solid var(--line);padding-top:14px}summary{cursor:pointer;font-weight:600}form{display:grid;grid-template-columns:1fr;gap:14px;margin-top:18px}label{font-size:14px;color:var(--muted);display:grid;gap:6px}input{font:inherit;font-size:16px;width:100%;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:7px;background:white;color:var(--ink)}.manual{font-size:13px;color:var(--muted);margin:0}.metrics{font-variant-numeric:tabular-nums}#error{color:#a22b21;font-size:14px}#error:empty{display:none}@media(min-width:768px){main{padding-top:30px}.lesson{padding-top:30px}form{grid-template-columns:1fr 110px}form button,form .manual{grid-column:1/-1}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<main>
+<header><strong>学习倒计时</strong><span id="connection">正在连接</span></header>
+<section class="lesson"><small id="scope">当前小节</small><h1 id="lesson-title">主线 2/5：超时到底终止了什么</h1></section>
+<section class="clock" aria-label="本节倒计时">
+<div class="digits" id="time">13:00</div>
+<p id="status" role="status" aria-live="polite">准备开始</p>
+<progress id="progress" max="1" value="0" aria-label="本节计时进度"></progress>
+<div id="meta"><span id="budget">本节预算 13 分钟</span><span id="elapsed" class="metrics">已计时 00:00</span></div>
+</section>
+<div class="controls"><button class="primary" id="toggle">暂停</button><button id="reset">重新计时</button><button id="stop">结束本节</button></div>
+<div id="notice" role="status" hidden>本节预算已用完。可以继续阅读，也可以回到对话开始下一节；不会自动跳课。</div>
+<p id="error" role="alert"></p>
+<div class="note"><p id="mode-note">在本机打开时，倒计时可在豆包工作右侧保持显示。</p><p>这是节奏提示，不是掌握证明。暂停只暂停计时，不会改变课程进度；窗口隐藏或电脑休眠不会自动暂停。</p></div>
+<details><summary>手动调整小节或时长</summary><form id="lesson-form"><label>小节标题<input id="title-input" maxlength="180" value="主线 2/5：超时到底终止了什么" required></label><label>分钟<input id="minutes-input" type="number" min="0.1" max="240" step="0.1" value="13" required></label><button type="submit">开始新计时</button><p class="manual">新的小节会替换当前计时。与学习技能配合时，技能会自动更新这里，不需要手动填写。</p></form></details>
+</main>
+<script>
+'use strict';
+const API_TOKEN = "";
+const serverMode = Boolean(API_TOKEN);
+const storageKey = 'learning-coach-timer:' + location.pathname;
+let state = null, clockOffset = 0, fetching = false, pending = false, lastAnnouncement = '';
+const el = id => document.getElementById(id);
+const fmt = seconds => { const n = Math.max(0,Math.ceil(seconds)); return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0'); };
+function remaining(){ if(!state)return 780;return state.status === 'running' ? Math.max(0,(state.deadline_ms-(Date.now()+clockOffset))/1000):Math.max(0,state.remaining_seconds||0); }
+function saveLocal(){try{localStorage.setItem(storageKey,JSON.stringify(state));}catch(_){el('connection').textContent='独立计时 · 无持久化';}}
+function accept(data){if(!data || typeof data.status!=='string')throw Error('计时状态不完整');state=data;if(Number.isFinite(data.server_now_ms))clockOffset=data.server_now_ms-Date.now();render();}
+function render(){
+ if(!state)return;let rem=remaining();if(!serverMode&&state.status==='running'&&rem<=0){state.status='finished';state.remaining_seconds=0;state.deadline_ms=null;saveLocal();}
+ const finished=state.status==='finished'||(state.status==='running'&&rem<=0);
+ el('lesson-title').textContent=state.title;el('time').textContent=fmt(rem);document.title=fmt(rem)+' · 学习倒计时';
+ const labels={idle:'等待下一小节',running:'计时中',paused:'已暂停',finished:'本节预算已用完',stopped:'本节计时已结束'};const message=finished?labels.finished:labels[state.status]||'等待状态';if(message!==lastAnnouncement){el('status').textContent=message;lastAnnouncement=message;}
+ el('progress').value=state.duration_seconds?Math.min(1,Math.max(0,1-rem/state.duration_seconds)):0;
+ el('budget').textContent='本节预算 '+((state.duration_seconds||0)/60).toLocaleString('zh-CN',{maximumFractionDigits:1})+' 分钟';
+ el('elapsed').textContent='已计时 '+fmt(Math.max(0,(state.duration_seconds||0)-rem));el('notice').hidden=!finished;
+ el('toggle').textContent=state.status==='paused'?'继续计时':'暂停';el('toggle').disabled=pending||!['running','paused'].includes(state.status)||finished;
+ el('reset').disabled=pending||!state.duration_seconds;el('stop').disabled=pending||['idle','stopped'].includes(state.status);
+}
+async function poll(){if(!serverMode||fetching)return;fetching=true;try{const res=await fetch('/api/state',{cache:'no-store'});if(!res.ok)throw Error('无法读取计时状态');accept(await res.json());el('connection').textContent='本机实时同步';el('error').textContent='';}catch(_){el('connection').textContent='连接中断';el('error').textContent='本机计时服务不可达，数字按最后一次收到的截止时间继续显示；重新连接后会校准。';}finally{fetching=false;}}
+async function action(name,extra={}){
+ pending=true;render();try{
+  if(serverMode){const res=await fetch('/api/action',{method:'POST',headers:{'Content-Type':'application/json','X-Timer-Token':API_TOKEN},body:JSON.stringify({action:name,...extra})});if(!res.ok)throw Error('操作失败，请检查服务是否在线');accept(await res.json());}
+  else{const now=Date.now(),rem=remaining();if(name==='start'){const duration=extra.minutes*60;state={status:'running',title:extra.title,lesson_key:extra.lesson_key,duration_seconds:duration,remaining_seconds:duration,deadline_ms:now+duration*1000,started_at_ms:now};}
+   else if(name==='pause'&&state.status==='running'){state.remaining_seconds=rem;state.deadline_ms=null;state.status='paused';}
+   else if(name==='resume'&&state.status==='paused'){state.deadline_ms=now+state.remaining_seconds*1000;state.status='running';}
+   else if(name==='reset'){state.remaining_seconds=state.duration_seconds;state.deadline_ms=now+state.duration_seconds*1000;state.started_at_ms=now;state.status='running';}
+   else if(name==='stop'){state.remaining_seconds=rem;state.deadline_ms=null;state.status='stopped';}
+   saveLocal();render();}
+  el('error').textContent='';
+ }catch(e){el('error').textContent=e.message||'计时操作未完成';}finally{pending=false;render();}
+}
+el('toggle').addEventListener('click',()=>action(state.status==='paused'?'resume':'pause'));el('reset').addEventListener('click',()=>action('reset'));el('stop').addEventListener('click',()=>action('stop'));
+el('lesson-form').addEventListener('submit',event=>{event.preventDefault();const title=el('title-input').value.trim(),minutes=Number(el('minutes-input').value);if(!title||!Number.isFinite(minutes)||minutes<=0||minutes>240){el('error').textContent='请输入有效标题与0～240分钟以内的正数。';return;}action('start',{title,minutes,lesson_key:'manual:'+Date.now()+':'+Math.random().toString(36).slice(2)});});
+if(serverMode){el('mode-note').textContent='本机服务与学习技能同步：开始新节时自动更新。服务最多运行8小时，不会随开机启动；关闭页面不会自动停表。';poll();setInterval(poll,1000);}
+else{el('connection').textContent='独立计时';el('mode-note').textContent='独立页面在首次打开时自动开始13分钟；再次打开尝试恢复该页面原计时。与对话自动联动需使用技能的本机服务模式。';try{const saved=JSON.parse(localStorage.getItem(storageKey)||'null');if(saved&&['running','paused','finished','stopped'].includes(saved.status)&&Number.isFinite(saved.duration_seconds)&&Number.isFinite(saved.remaining_seconds)&&typeof saved.title==='string'){state=saved;}}catch(_){}if(!state){action('start',{title:el('title-input').value,minutes:13,lesson_key:'standalone:'+Date.now()});}else render();}
+setInterval(render,250);document.addEventListener('visibilitychange',()=>{render();if(serverMode)poll();});
+</script>
+</body>
+</html>
