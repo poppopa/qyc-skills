@@ -1,6 +1,6 @@
 # qyc-skills
 
-可公开使用的 Agent Skills。当前包含 **Learning Coach · 通用学习教练**，技能标识为 `tech-learning-coach`。
+可公开使用的 Agent Skills。当前包含 **Learning Coach · 通用学习教练**（`tech-learning-coach`）与 **极客时间课程学习适配器**（`geekbang-lesson-learning`）。
 
 它适合这样的情况：你想了解一个领域，却还不能确定自己是否感兴趣。不用一开始就承诺几周的学习计划，先看清全貌，再决定投入多少。
 
@@ -17,6 +17,17 @@
 
 不是把知识点列成目录：流程类会讲角色、条件和分支，人文类会区分事实与解释，实践类会结合示范与判断标准。专业主题有适用范围和来源核验要求。
 
+### 极客时间课程学习 / `geekbang-lesson-learning`
+
+提供极客时间课程链接后，先完整读取公开介绍、所有相关“查看更多”及长图目录，再结合 `tech-learning-coach` 制定学习路线。
+
+- **完整性先行**：核对内联展开、讲师弹层、懒加载、目录分页与图片首尾，不把文本提取成功等同于页面读全。
+- **以原课程为范围**：保留原模块/原题编号到教练小节的映射；可拆合重排，但其余内容必须有选学、后续或暂缓去向。
+- **沿用学习教练**：先看全貌，按已确认目标与小时预算规划；只要计划不自动开课，不启动倒计时。
+- **访问边界清楚**：介绍、大纲与各讲正文分开标记；不声称读过付费正文，不购买或绕过访问限制。
+
+依赖同一环境可读取的 `tech-learning-coach` 完整目录，以及宿主浏览器/公开全文与图片读取能力。默认走 Browser Use，具体操作加载宿主的浏览器规范；仅在符合授权边界时降级。没有教练时会说明依赖缺失，不自动安装。
+
 ## 安装
 
 ### 使用 Skills CLI
@@ -25,6 +36,12 @@
 
 ```bash
 npx skills add poppopa/qyc-skills --skill tech-learning-coach
+```
+
+使用极客时间适配器时，同时安装学习教练：
+
+```bash
+npx skills add poppopa/qyc-skills --skill tech-learning-coach --skill geekbang-lesson-learning
 ```
 
 用户级安装（跨项目）：
@@ -38,8 +55,8 @@ npx skills add poppopa/qyc-skills --skill tech-learning-coach -g
 ### 手动安装
 
 1. 下载或克隆本仓库。
-2. 将 `skills/tech-learning-coach/` **整个目录**复制到目标客户端的技能目录，不要只复制 `SKILL.md`。
-3. 按客户端的技能加载方式启用，查找标识 `tech-learning-coach`。
+2. 将需要的 `skills/<技能名>/` **整个目录**复制到目标客户端的技能目录，不要只复制 `SKILL.md`；极客时间适配器需要同时保留 `tech-learning-coach/`。
+3. 按客户端的技能加载方式启用，查找标识 `tech-learning-coach` 或 `geekbang-lesson-learning`。
 
 ```bash
 git clone https://github.com/poppopa/qyc-skills.git
@@ -65,6 +82,12 @@ git clone https://github.com/poppopa/qyc-skills.git
 
 > 这一节换个例子。 / 不做题，继续。 / 先总结进度。 / 我想深入这个分支。
 
+按极客时间课程规划：
+
+> 用 geekbang-lesson-learning 读取 https://time.geekbang.org/column/intro/101189701 的完整课程描述，包含“查看更多”和图片目录；结合学习教练制定路线，先不开始授课。
+
+> 我有 Python 基础，本轮两小时理解状态恢复；保留其他模块的后续去向，只给计划。
+
 ## 运行要求与边界
 
 - 这是**指令型 Skill**，不是独立 Agent、插件服务或完整应用。宿主需要能读取技能文件并遵循它的指令。
@@ -83,6 +106,12 @@ qyc-skills/
 ├── README.md
 ├── LICENSE
 └── skills/
+    ├── geekbang-lesson-learning/
+    │   ├── SKILL.md
+    │   └── references/
+    │       ├── course-reading.md
+    │       ├── plan-mapping.md
+    │       └── acceptance-cases.md
     └── tech-learning-coach/
         ├── SKILL.md
         ├── assets/学习倒计时.html
@@ -98,7 +127,7 @@ qyc-skills/
 
 ## 验证状态
 
-技能元数据、相对资源引用、文件结构和关键规则经过静态检查；含26个行为验收场景，计时器包含9项自动回归测试。**行为场景不是26项模型实测通过报告**。不同客户端的实际授课与计时展示仍需运行验证。
+技能元数据、相对资源引用、文件结构和关键规则经过静态检查。学习教练含26个行为验收场景，计时器包含9项自动回归测试；极客时间适配器另含26个行为验收场景，并用示例页核验了目录展开、原始长图分段阅读与讲师弹层读取。**行为场景不是模型实测通过报告，页面读取核验也不是端到端教学验证**。不同客户端的实际学习设计、授课与计时展示仍需运行验证。
 
 ## 贡献
 
